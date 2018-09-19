@@ -145,6 +145,9 @@ func (q *Queue) BatchReceiveMessage(numOfMsg,pollingWaitSeconds int) (result []M
 	}
 	r, err := q.client.cmqCall(BatchReceiveMessage, params)
 
+	if err != nil {
+		return nil,err
+	}
 	log.Println("result json: " + r)
 
 	var msg batchMessage
