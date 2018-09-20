@@ -19,6 +19,10 @@ const (
 	BatchSendMessage 		= "BatchSendMessage"
 	//批量消费消息Action
 	BatchReceiveMessage		= "BatchReceiveMessage"
+	//删除消息Action
+	DeleteMessage 			= "DeleteMessage"
+	//批量删除消息
+	BatchDeleteMessage		= "BatchDeleteMessage"
 )
 
 type Message struct {

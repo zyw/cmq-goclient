@@ -179,3 +179,64 @@ func (q *Queue) BatchReceiveMessage(numOfMsg,pollingWaitSeconds int) (result []M
 
 	return msgs,nil
 }
+
+// 删除消息
+// receiptHandle 上次消费返回唯一的消息句柄，用于删除消息。
+func (q *Queue) DeleteMessage(receiptHandle string) error {
+
+	params := map[string]interface{} {
+		"queueName":q.queueName,
+		"receiptHandle":receiptHandle,
+	}
+
+	result, err := q.client.cmqCall(DeleteMessage, params)
+
+	if err != nil {
+		return err
+	}
+	var message msg
+
+	if err := json.Unmarshal([]byte(result),&message);err != nil {
+		log.Println(err.Error())
+		return err
+	}
+	if message.Code != 0 {
+		return errors.New(fmt.Sprintf("code:%d, %v, RequestId: %v",message.Code,message.Message,message.RequestId))
+	}
+
+	return nil
+}
+
+// 批量删除消息
+// receiptHandle 上次消费返回唯一的消息句柄，用于删除消息。
+func (q *Queue) BatchDeleteMessage(receiptHandles []string) error {
+
+	if receiptHandles == nil || len(receiptHandles) == 0 {
+		return errors.New("receiptHandles is nil or empty!")
+	}
+
+	params := map[string]interface{} {
+		"queueName":q.queueName,
+	}
+
+	for i,rh := range receiptHandles {
+		params["receiptHandle." + strconv.Itoa(i)] = rh
+	}
+
+	result, err := q.client.cmqCall(BatchDeleteMessage, params)
+
+	if err != nil {
+		return err
+	}
+	var message msg
+
+	if err := json.Unmarshal([]byte(result),&message);err != nil {
+		log.Println(err.Error())
+		return err
+	}
+	if message.Code != 0 {
+		return errors.New(fmt.Sprintf("code:%d, %v, RequestId: %v",message.Code,message.Message,message.RequestId))
+	}
+
+	return nil
+}
