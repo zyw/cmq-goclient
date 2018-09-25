@@ -98,6 +98,7 @@ func NewAccount(endpoint, secretId, secretKey,method,signMethod string) *CmqConf
 }
 
 //返回Queue对象
+//读取队列消息，向队列发送消息有关
 func (a *CmqConfig) GetQueue(queueName string) *Queue  {
 	return &Queue{
 		client:newCmqClient(a),
@@ -105,15 +106,26 @@ func (a *CmqConfig) GetQueue(queueName string) *Queue  {
 	}
 }
 //创建CMQ
+//和创建主题，队列，订阅有关
 func (a *CmqConfig) GetCmq() *Cmq {
 	return &Cmq{
 		client:newCmqClient(a),
 	}
 }
 //创建Topic
+//修改主题参数，向主题发送消息
 func (a *CmqConfig) GetTopic(topicName string) *Topic {
 	return &Topic{
 		topicName:topicName,
+		client:newCmqClient(a),
+	}
+}
+//获取订阅
+//订阅参数设置
+func (a *CmqConfig) GetSubscription(topicName,subscriptionName string) *Subscription {
+	return &Subscription{
+		topicName:topicName,
+		subscriptionName:subscriptionName,
 		client:newCmqClient(a),
 	}
 }
