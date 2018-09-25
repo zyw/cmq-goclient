@@ -26,42 +26,42 @@ const (
 )
 
 type Message struct {
-	Code int					`json:code` 			//0：表示成功，others：错误，详细错误见下表。
-	Message string				`json:message`			//错误提示信息。
-	RequestId string			`json:requestId`    	//服务器生成的请求 Id，出现服务器内部错误时，用户可提交此 Id 给后台定位问题。
-	MsgId string				`json:msgId`    		//(单条)服务器生成消息的唯一标识 Id。
-	ReceiptHandle string		`json:receiptHandle`	// 每次消费唯一的消息句柄，用于删除等操作
-	MsgBody string				`json:msgBody`			// 消息体
-	EnqueueTime int64			`json:enqueueTime`		// 消息发送到队列的时间，从 1970年1月1日 00:00:00 000 开始的毫秒数
-	NextVisibleTime int64		`json:nextVisibleTime`	// 消息下次可见的时间，从 1970年1月1日 00:00:00 000 开始的毫秒数
-	FirstDequeueTime int64		`json:firstDequeueTime`	// 消息第一次出队列的时间，从 1970年1月1日 00:00:00 000 开始的毫秒数
-	DequeueCount int			`json:dequeueCount`		// 出队列次数
-	MsgTag []string				`json:msgTag`
+	Code int					`json:"code"` 			//0：表示成功，others：错误，详细错误见下表。
+	Message string				`json:"message"`			//错误提示信息。
+	RequestId string			`json:"requestId"`    	//服务器生成的请求 Id，出现服务器内部错误时，用户可提交此 Id 给后台定位问题。
+	MsgId string				`json:"msgId"`    		//(单条)服务器生成消息的唯一标识 Id。
+	ReceiptHandle string		`json:"receiptHandle"`	// 每次消费唯一的消息句柄，用于删除等操作
+	MsgBody string				`json:"msgBody"`			// 消息体
+	EnqueueTime int64			`json:"enqueueTime"`		// 消息发送到队列的时间，从 1970年1月1日 00:00:00 000 开始的毫秒数
+	NextVisibleTime int64		`json:"nextVisibleTime"`	// 消息下次可见的时间，从 1970年1月1日 00:00:00 000 开始的毫秒数
+	FirstDequeueTime int64		`json:"firstDequeueTime"`	// 消息第一次出队列的时间，从 1970年1月1日 00:00:00 000 开始的毫秒数
+	DequeueCount int			`json:"dequeueCount"`		// 出队列次数
+	MsgTag []string				`json:"msgTag"`
 }
 
 type msg struct {
-	Code int					`json:code` 		//0：表示成功，others：错误，详细错误见下表。
-	Message string				`json:message`		//错误提示信息。
-	RequestId string			`json:requestId`    //服务器生成的请求 Id，出现服务器内部错误时，用户可提交此 Id 给后台定位问题。
-	MsgId string				`json:msgId`    	//(单条)服务器生成消息的唯一标识 Id。
-	MsgList []map[string]string	`json:msgList`		//(批量)服务器生成消息的唯一标识 Id 列表，每个元素是一条消息的信息。
+	Code int					`json:"code"` 		//0：表示成功，others：错误，详细错误见下表。
+	Message string				`json:"message"`		//错误提示信息。
+	RequestId string			`json:"requestId"`    //服务器生成的请求 Id，出现服务器内部错误时，用户可提交此 Id 给后台定位问题。
+	MsgId string				`json:"msgId"`    	//(单条)服务器生成消息的唯一标识 Id。
+	MsgList []map[string]string	`json:"msgList"`		//(批量)服务器生成消息的唯一标识 Id 列表，每个元素是一条消息的信息。
 }
 
 type batchMessage struct {
-	Code 			int				`json:code`
-	Message 		string 			`json:message`
-	RequestId 		string			`json:requestId`
-	ClientRequestId int				`json:clientRequestId`
-	MsgInfoList 	[]msgInfoList	`json:msgInfoList`
+	Code 			int				`json:"code"`
+	Message 		string 			`json:"message"`
+	RequestId 		string			`json:"requestId"`
+	ClientRequestId int				`json:"clientRequestId"`
+	MsgInfoList 	[]msgInfoList	`json:"msgInfoList"`
 }
 type msgInfoList struct {
-	MsgId string				`json:msgId`
-	ReceiptHandle string		`json:receiptHandle`
-	MsgBody string				`json:msgBody`
-	EnqueueTime int64			`json:enqueueTime`
-	NextVisibleTime int64		`json:nextVisibleTime`
-	FirstDequeueTime int64 		`json:firstDequeueTime`
-	DequeueCount int			`json:dequeueCount`
+	MsgId string				`json:"msgId"`
+	ReceiptHandle string		`json:"receiptHandle"`
+	MsgBody string				`json:"msgBody"`
+	EnqueueTime int64			`json:"enqueueTime"`
+	NextVisibleTime int64		`json:"nextVisibleTime"`
+	FirstDequeueTime int64 		`json:"firstDequeueTime"`
+	DequeueCount int			`json:"dequeueCount"`
 }
 
 type CmqConfig struct {
