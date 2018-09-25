@@ -104,6 +104,19 @@ func (a *CmqConfig) GetQueue(queueName string) *Queue  {
 		queueName:queueName,
 	}
 }
+//创建CMQ
+func (a *CmqConfig) GetCmq() *Cmq {
+	return &Cmq{
+		client:newCmqClient(a),
+	}
+}
+//创建Topic
+func (a *CmqConfig) GetTopic(topicName string) *Topic {
+	return &Topic{
+		topicName:topicName,
+		client:newCmqClient(a),
+	}
+}
 
 type Client struct {
 	account *CmqConfig
