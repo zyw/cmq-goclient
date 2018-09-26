@@ -328,8 +328,10 @@ func (cmq *Cmq) ListTopic(searchWord string, vTopicList []string ,offset,limit i
 		return 0,errors.New(fmt.Sprintf("code:%d, %v, RequestId: %v",res.Code,res.Message,res.RequestId))
 	}
 
-	for i,ts := range res.TopicList {
-		vTopicList[i] = ts.TopicName
+	if vTopicList != nil {
+		for i,ts := range res.TopicList {
+			vTopicList[i] = ts.TopicName
+		}
 	}
 
 	return res.TotalCount,nil

@@ -208,8 +208,10 @@ func (this *Subscription) ListSubscription(offset,limit int,searchWord string,vS
 		return 0,errors.New(fmt.Sprintf("code:%d, %v, RequestId: %v",code,sr.Message,sr.RequestId))
 	}
 
-	for i,sl := range sr.SubscriptionList {
-		vSubscriptionList[i] = sl.SubscriptionName
+	if vSubscriptionList != nil {
+		for i,sl := range sr.SubscriptionList {
+			vSubscriptionList[i] = sl.SubscriptionName
+		}
 	}
 
 	return sr.TotalCount,nil
