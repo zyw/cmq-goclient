@@ -8,6 +8,7 @@ import (
 	"errors"
 	"net/http"
 	"github.com/zyw/cmq-goclient/util"
+	"log"
 )
 
 const (
@@ -173,6 +174,8 @@ func (cc *Client) cmqCall(action string,params map[string]interface{}) (result s
 	}
 
 	src := cc.account.method + host + cc.account.path + "?" + util.MapToURLParam(params,false)
+
+	log.Printf("请求参数：%s\n",src)
 
 	params["Signature"] = util.Base64(util.HmacSHA256(src,cc.account.secretKey))
 	var url string

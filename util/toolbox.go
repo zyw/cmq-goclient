@@ -8,6 +8,7 @@ import (
 	"strings"
 	"strconv"
 	"net/url"
+	"fmt"
 )
 
 func HmacSHA256(plaintext, secret string) []byte {
@@ -29,19 +30,22 @@ func MapToURLParam(src map[string]interface{},encoder bool) string {
 
 	sort.Strings(keys)
 
-	var param []string
+	param := make([]string,len(keys))
 
-	for _,k := range keys {
+	for i,k := range keys {
 		key := strings.Replace(k,"_",".",-1)
 		if s,ok := src[k].(string);ok {
 			if encoder {
-				param = append(param,key + "=" + url.QueryEscape(s))
+				param[i] = key + "=" + url.QueryEscape(s)
 			} else {
-				param = append(param,key + "=" + s)
+				param[i] = key + "=" + s
 			}
-		}
-		if s,ok := src[k].(int);ok {
-			param = append(param,key + "=" + strconv.Itoa(s))
+		} else if s,ok := src[k].(int);ok {
+			param[i] = key + "=" + strconv.Itoa(s)
+		} else if s,ok := src[k].(int64);ok {
+			param[i] = fmt.Sprintf("%s=%d",key,s)
+		} else {
+			param[i] = fmt.Sprintf("%s=%T",key,k)
 		}
 	}
 
