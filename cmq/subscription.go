@@ -14,6 +14,7 @@ const (
 	ClearSUbscriptionFIlterTags 		=	"ClearSUbscriptionFIlterTags"
 	SetSubscriptionAttributes			=	"SetSubscriptionAttributes"
 	GetSubscriptionAttributes			=	"GetSubscriptionAttributes"
+	ListSubscriptionByTopic				=	"ListSubscriptionByTopic"
 )
 
 type Subscription struct {
@@ -44,6 +45,21 @@ type SubscriptionMeta struct {
 	BindingKey			[]string
 }
 
+type SubscriptionResult struct {
+	Code int								`json:"code"`
+	Message string							`json:"message"`
+	RequestId string 						`json:"requestId"`
+	TotalCount int 							`json:"totalCount"`
+	SubscriptionList []SubscriptionList 	`json:"subscriptionList"`
+}
+
+type SubscriptionList struct {
+	SubscriptionId	string		`json:"subscriptionId"`
+	SubscriptionName string		`json:"subscriptionName"`
+	Protocol		 string		`json:"protocol"`
+	Endpoint		 string		`json:"endpoint"`
+}
+
 func (this *Subscription) ClearFilterTags() error {
 
 	params := map[string]interface{} {
@@ -54,6 +70,7 @@ func (this *Subscription) ClearFilterTags() error {
 	return handleSubscriptionApi(this,ClearSUbscriptionFIlterTags,params)
 }
 
+// 修改订阅属性
 func (this *Subscription) SetSubscriptionAttributes(meta SubscriptionMeta) error {
 	params := map[string]interface{} {
 		"topicName" : this.topicName,
@@ -79,6 +96,7 @@ func (this *Subscription) SetSubscriptionAttributes(meta SubscriptionMeta) error
 	return handleSubscriptionApi(this,SetSubscriptionAttributes,params)
 }
 
+// 获取订阅属性
 func (this *Subscription) GetSubscriptionAttributes() (*SubscriptionMeta,error) {
 
 	params := map[string]interface{} {
@@ -104,44 +122,97 @@ func (this *Subscription) GetSubscriptionAttributes() (*SubscriptionMeta,error) 
 
 	var meta *SubscriptionMeta
 
-	/*meta.FilterTag
+	endpoint,ok := res["endpoint"].(string)
+	if ok && len(endpoint) != 0 {
+		meta.Endpoint = endpoint
+	}
 
-	SubscriptionMeta meta = new SubscriptionMeta();
-	meta.FilterTag = new Vector<String>();
-	if(jsonObj.has("endpoint"))
-		meta.Endpoint = jsonObj.getString("endpoint");
-	if(jsonObj.has("notifyStrategy"))
-		meta.NotifyStrategy = jsonObj.getString("notifyStrategy");
-	if(jsonObj.has("notifyContentFormat"))
-		meta.NotifyContentFormat = jsonObj.getString("notifyContentFormat");
-	if(jsonObj.has("protocol"))
-		meta.Protocal = jsonObj.getString("protocol");
-	if(jsonObj.has("createTime"))
-		meta.CreateTime = jsonObj.getInt("createTime");
-	if(jsonObj.has("lastModifyTime"))
-		meta.LastModifyTime = jsonObj.getInt("lastModifyTime");
-	if(jsonObj.has("msgCount"))
-		meta.msgCount = jsonObj.getInt("msgCount");
-	if(jsonObj.has("filterTag"))
-	{
-		JSONArray jsonArray = jsonObj.getJSONArray("filterTag");
-		for(int i=0;i<jsonArray.length();i++)
-		{
-			JSONObject obj = (JSONObject)jsonArray.get(i);
-			meta.FilterTag.add(obj.toString());
+	notifyStrategy,ok := res["notifyStrategy"].(string)
+	if ok && len(notifyStrategy) != 0 {
+		meta.NotifyStrategy = notifyStrategy
+	}
+
+	notifyContentFormat,ok := res["notifyContentFormat"].(string)
+	if ok && len(notifyContentFormat) !=0 {
+		meta.NotifyContentFormat = notifyContentFormat
+	}
+
+	protocol,ok := res["protocol"].(string)
+	if ok && len(protocol) != 0 {
+		meta.Protocal = protocol
+	}
+
+	createTime,ok := res["createTime"].(int)
+	if ok {
+		meta.CreateTime = createTime
+	}
+
+	lastModifyTime,ok := res["lastModifyTime"].(int)
+	if ok {
+		meta.LastModifyTime = lastModifyTime
+	}
+
+	msgCount,ok := res["msgCount"].(int)
+	if ok {
+		meta.MsgCount = msgCount
+	}
+
+	fts,ok := res["filterTag"].([]string)
+	if ok && fts != nil && len(fts) != 0 {
+		for i,ft := range fts {
+			meta.FilterTag[i] = ft
 		}
 	}
-	if(jsonObj.has("bindingKey"))
-	{
-		JSONArray jsonArray = jsonObj.getJSONArray("bindingKey");
-		for(int i=0;i<jsonArray.length();i++)
-		{
-			JSONObject obj = (JSONObject)jsonArray.get(i);
-			meta.bindingKey.add(obj.toString());
+
+	bks,ok := res["bindingKey"].([]string)
+	if ok && bks != nil && len(bks) != 0 {
+		for i,bk := range bks {
+			meta.BindingKey[i] = bk
 		}
-	}*/
+	}
 
 	return meta,nil
+}
+// 获取订阅列表
+// searchWord 用于过滤订阅列表，后台用模糊匹配的方式来返回符合条件的订阅列表。如果不填该参数，默认返回帐号下的所有订阅。
+// offset 分页时本页获取订阅列表的起始位置。如果填写了该值，必须也要填写 limit。该值缺省时，后台取默认值 0。取值范围 0-1000。
+// limit 分页时本页获取订阅的个数，该参数取值范围 0-100。如果不传递该参数，则该参数默认为 20。
+func (this *Subscription) ListSubscription(offset,limit int,searchWord string,vSubscriptionList []string) (int,error) {
+	params := map[string]interface{} {
+		"topicName":this.topicName,
+	}
+	if len(searchWord) != 0 {
+		params["searchWord"] = searchWord
+	}
+	if offset >= 0 {
+		params["offset"] = offset
+	}
+	if limit >= 0 {
+		params["limit"] = limit
+	}
+	result, err := this.client.cmqCall(ListSubscriptionByTopic, params)
+	if err != nil {
+		log.Error("create queue error msg: " + err.Error())
+		return 0,err
+	}
+
+	var sr SubscriptionResult
+	if err := json.Unmarshal([]byte(result),&sr);err != nil {
+		log.Error("parse json string error, msg: " + err.Error())
+		return 0,errors.New("parse json string error!")
+	}
+
+	code := sr.Code
+	if code != 0 {
+		log.Error(fmt.Sprintf("code:%d, %v, RequestId: %v",code,sr.Message,sr.RequestId))
+		return 0,errors.New(fmt.Sprintf("code:%d, %v, RequestId: %v",code,sr.Message,sr.RequestId))
+	}
+
+	for i,sl := range sr.SubscriptionList {
+		vSubscriptionList[i] = sl.SubscriptionName
+	}
+
+	return sr.TotalCount,nil
 }
 
 func handleSubscriptionApi(sub *Subscription,action string,params map[string]interface{}) error {
