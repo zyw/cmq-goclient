@@ -2,7 +2,7 @@ package cmq
 
 import (
 	"strings"
-	"github.com/labstack/gommon/log"
+	"log"
 	"errors"
 	"fmt"
 	"encoding/json"
@@ -169,7 +169,7 @@ func (meta *QueueMeta) SetRewindSeconds(rewindSeconds int)  {
 func (cmq *Cmq) CreateQueue(queueName string,meta *QueueMeta) error {
 	qn := strings.TrimSpace(queueName)
 	if len(qn) == 0 {
-		log.Error("Invalid parameter:queueName is empty")
+		log.Println("Invalid parameter:queueName is empty")
 		return errors.New("Invalid parameter:queueName is empty")
 	}
 	params := map[string]interface{} {
@@ -199,7 +199,7 @@ func (cmq *Cmq) CreateQueue(queueName string,meta *QueueMeta) error {
 func (cmq *Cmq) DeleteQueue(queueName string) error {
 	qn := strings.TrimSpace(queueName)
 	if len(qn) == 0 {
-		log.Error("Invalid parameter:queueName is empty")
+		log.Println("Invalid parameter:queueName is empty")
 		return errors.New("Invalid parameter:queueName is empty")
 	}
 
@@ -238,11 +238,11 @@ func (cmq *Cmq) ListQueue(searchWord string,offset,limit int, queueList []string
 
 	var res ListQueueResult
 	if err := json.Unmarshal([]byte(result),&res);err != nil {
-		log.Error("parse json string error, msg: " + err.Error())
+		log.Println("parse json string error, msg: " + err.Error())
 		return 0,errors.New("parse json string error!")
 	}
 	if res.Code != 0 {
-		log.Error(fmt.Sprintf("code:%d, %v, RequestId: %v",res.Code,res.Message,res.RequestId))
+		log.Println(fmt.Sprintf("code:%d, %v, RequestId: %v",res.Code,res.Message,res.RequestId))
 		return 0,errors.New(fmt.Sprintf("code:%d, %v, RequestId: %v",res.Code,res.Message,res.RequestId))
 	}
 
@@ -318,11 +318,11 @@ func (cmq *Cmq) ListTopic(searchWord string, vTopicList []string ,offset,limit i
 
 	var res ListTopicResult
 	if err := json.Unmarshal([]byte(result),&res);err != nil {
-		log.Error("parse json string error, msg: " + err.Error())
+		log.Println("parse json string error, msg: " + err.Error())
 		return 0,errors.New("parse json string error!")
 	}
 	if res.Code != 0 {
-		log.Error(fmt.Sprintf("code:%d, %v, RequestId: %v",res.Code,res.Message,res.RequestId))
+		log.Println(fmt.Sprintf("code:%d, %v, RequestId: %v",res.Code,res.Message,res.RequestId))
 		return 0,errors.New(fmt.Sprintf("code:%d, %v, RequestId: %v",res.Code,res.Message,res.RequestId))
 	}
 
@@ -421,18 +421,18 @@ func (cmq *Cmq) DeleteSubscribe(topicName,subscriptionName string) error {
 func handleCmqApi(cmq *Cmq,action string,params map[string]interface{}) error {
 	result, err := cmq.client.cmqCall(action, params)
 	if err != nil {
-		log.Error("create queue error msg: " + err.Error())
+		log.Println("create queue error msg: " + err.Error())
 		return err
 	}
 
 	var message msg
 	if err := json.Unmarshal([]byte(result),&message);err != nil {
-		log.Error("parse json string error, msg: " + err.Error())
+		log.Println("parse json string error, msg: " + err.Error())
 		return errors.New("parse json string error!")
 	}
 	code := message.Code
 	if code != 0 {
-		log.Error(fmt.Sprintf("code:%d, %v, RequestId: %v",code,message.Message,message.RequestId))
+		log.Println(fmt.Sprintf("code:%d, %v, RequestId: %v",code,message.Message,message.RequestId))
 		return errors.New(fmt.Sprintf("code:%d, %v, RequestId: %v",code,message.Message,message.RequestId))
 	}
 	return nil

@@ -13,6 +13,100 @@ type Queue struct {
 	queueName string
 }
 
+// 设置队列属性
+func (q *Queue) SetQueueAttributes(meta *QueueMeta) error {
+
+	params := map[string]interface{} {
+		"queueName": q.queueName,
+	}
+
+	if meta.maxMsgHeapNum > 0 {
+		params["maxMsgHeapNum"] = meta.maxMsgHeapNum
+	}
+
+	if meta.pollingWaitSeconds > 0 {
+		params["pollingWaitSeconds"] = meta.pollingWaitSeconds
+	}
+
+	if meta.visibilityTimeout > 0 {
+		params["visibilityTimeout"] = meta.visibilityTimeout
+	}
+
+	if meta.maxMsgSize > 0 {
+		params["maxMsgSize"] = meta.maxMsgSize
+	}
+
+	if meta.msgRetentionSeconds > 0 {
+		params["msgRetentionSeconds"] = meta.msgRetentionSeconds
+	}
+	if meta.rewindSeconds > 0 {
+		params["rewindSeconds"] = meta.rewindSeconds
+	}
+	return handleQueueApi(q,SetQueueAttributes,params)
+}
+
+//获取队列属性
+func (q *Queue) GetQueueAttributes() (*QueueMeta,error) {
+	params := map[string]interface{} {
+		"queueName":q.queueName,
+	}
+
+	result, err := q.client.cmqCall(GetQueueAttributes, params)
+	if err != nil {
+		log.Println("create queue error msg: " + err.Error())
+		return nil,err
+	}
+
+	var res map[string]interface{}
+	if err := json.Unmarshal([]byte(result),&res);err != nil {
+		log.Println("parse json string error, msg: " + err.Error())
+		return nil,errors.New("parse json string error!")
+	}
+	code := res["code"].(int)
+	if code != 0 {
+		log.Println(fmt.Sprintf("code:%d, %v, RequestId: %v",code,res["message"],res["requestId"]))
+		return nil,errors.New(fmt.Sprintf("code:%d, %v, RequestId: %v",code,res["message"],res["requestId"]))
+	}
+
+	meta := &QueueMeta{
+		maxMsgHeapNum:			res["maxMsgHeapNum"].(int),
+		pollingWaitSeconds:		res["pollingWaitSeconds"].(int),
+		visibilityTimeout:		res["visibilityTimeout"].(int),
+		maxMsgSize:				res["maxMsgSize"].(int),
+		msgRetentionSeconds:	res["msgRetentionSeconds"].(int),
+		createTime:				res["createTime"].(int),
+		lastModifyTime:			res["lastModifyTime"].(int),
+		activeMsgNum:			res["activeMsgNum"].(int),
+		inactiveMsgNum:			res["inactiveMsgNum"].(int),
+		rewindmsgNum:			res["rewindMsgNum"].(int),
+		minMsgTime:				res["minMsgTime"].(int),
+		delayMsgNum:			res["delayMsgNum"].(int),
+		rewindSeconds:			res["rewindSeconds"].(int),
+	}
+
+	return meta,nil;
+}
+
+func handleQueueApi(q *Queue,action string,params map[string]interface{}) error {
+	result, err := q.client.cmqCall(action, params)
+	if err != nil {
+		log.Println("create queue error msg: " + err.Error())
+		return err
+	}
+
+	var message msg
+	if err := json.Unmarshal([]byte(result),&message);err != nil {
+		log.Println("parse json string error, msg: " + err.Error())
+		return errors.New("parse json string error!")
+	}
+	code := message.Code
+	if code != 0 {
+		log.Println(fmt.Sprintf("code:%d, %v, RequestId: %v",code,message.Message,message.RequestId))
+		return errors.New(fmt.Sprintf("code:%d, %v, RequestId: %v",code,message.Message,message.RequestId))
+	}
+	return nil
+}
+
 // 发消息
 // msgBody 消息正文。至少 1 Byte，最大长度受限于设置的队列消息最大长度属性。
 // delaySeconds 单位为秒，表示该消息发送到队列后，需要延时多久用户才可见该消息。传0表示立即可见

@@ -1,11 +1,11 @@
 package cmq
 
 import (
-	"github.com/labstack/gommon/log"
 	"encoding/json"
 	"fmt"
 	"errors"
 	"strconv"
+	"log"
 )
 
 const (
@@ -106,17 +106,17 @@ func (this *Subscription) GetSubscriptionAttributes() (*SubscriptionMeta,error) 
 
 	result, err := this.client.cmqCall(GetSubscriptionAttributes, params)
 	if err != nil {
-		log.Error("create queue error msg: " + err.Error())
+		log.Println("create queue error msg: " + err.Error())
 		return nil,err
 	}
 	var res map[string]interface{}
 	if err := json.Unmarshal([]byte(result),&res);err != nil {
-		log.Error("parse json string error, msg: " + err.Error())
+		log.Println("parse json string error, msg: " + err.Error())
 		return nil,errors.New("parse json string error!")
 	}
 	code := res["code"].(int)
 	if code != 0 {
-		log.Error(fmt.Sprintf("code:%d, %v, RequestId: %v",code,res["message"],res["requestId"]))
+		log.Println(fmt.Sprintf("code:%d, %v, RequestId: %v",code,res["message"],res["requestId"]))
 		return nil,errors.New(fmt.Sprintf("code:%d, %v, RequestId: %v",code,res["message"],res["requestId"]))
 	}
 
@@ -192,19 +192,19 @@ func (this *Subscription) ListSubscription(offset,limit int,searchWord string,vS
 	}
 	result, err := this.client.cmqCall(ListSubscriptionByTopic, params)
 	if err != nil {
-		log.Error("create queue error msg: " + err.Error())
+		log.Println("create queue error msg: " + err.Error())
 		return 0,err
 	}
 
 	var sr SubscriptionResult
 	if err := json.Unmarshal([]byte(result),&sr);err != nil {
-		log.Error("parse json string error, msg: " + err.Error())
+		log.Println("parse json string error, msg: " + err.Error())
 		return 0,errors.New("parse json string error!")
 	}
 
 	code := sr.Code
 	if code != 0 {
-		log.Error(fmt.Sprintf("code:%d, %v, RequestId: %v",code,sr.Message,sr.RequestId))
+		log.Println(fmt.Sprintf("code:%d, %v, RequestId: %v",code,sr.Message,sr.RequestId))
 		return 0,errors.New(fmt.Sprintf("code:%d, %v, RequestId: %v",code,sr.Message,sr.RequestId))
 	}
 
@@ -218,18 +218,18 @@ func (this *Subscription) ListSubscription(offset,limit int,searchWord string,vS
 func handleSubscriptionApi(sub *Subscription,action string,params map[string]interface{}) error {
 	result, err := sub.client.cmqCall(action, params)
 	if err != nil {
-		log.Error("create queue error msg: " + err.Error())
+		log.Println("create queue error msg: " + err.Error())
 		return err
 	}
 
 	var message msg
 	if err := json.Unmarshal([]byte(result),&message);err != nil {
-		log.Error("parse json string error, msg: " + err.Error())
+		log.Println("parse json string error, msg: " + err.Error())
 		return errors.New("parse json string error!")
 	}
 	code := message.Code
 	if code != 0 {
-		log.Error(fmt.Sprintf("code:%d, %v, RequestId: %v",code,message.Message,message.RequestId))
+		log.Println(fmt.Sprintf("code:%d, %v, RequestId: %v",code,message.Message,message.RequestId))
 		return errors.New(fmt.Sprintf("code:%d, %v, RequestId: %v",code,message.Message,message.RequestId))
 	}
 	return nil

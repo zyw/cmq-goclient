@@ -2,7 +2,7 @@ package cmq
 
 import (
 	"github.com/pkg/errors"
-	"github.com/labstack/gommon/log"
+	"log"
 	"encoding/json"
 	"fmt"
 	"strconv"
@@ -59,12 +59,12 @@ func (t *Topic) GetTopicAttributes() (*TopicMeta,error) {
 	}
 	var res map[string]interface{}
 	if err := json.Unmarshal([]byte(result),&res);err != nil {
-		log.Error("parse json string error, msg: " + err.Error())
+		log.Println("parse json string error, msg: " + err.Error())
 		return nil,errors.New("parse json string error!")
 	}
 	code := res["code"].(int)
 	if code != 0 {
-		log.Error(fmt.Sprintf("code:%d, %v, RequestId: %v",code,res["message"],res["requestId"]))
+		log.Println(fmt.Sprintf("code:%d, %v, RequestId: %v",code,res["message"],res["requestId"]))
 		return nil,errors.New(fmt.Sprintf("code:%d, %v, RequestId: %v",code,res["message"],res["requestId"]))
 	}
 
@@ -104,18 +104,18 @@ func (t *Topic) PublishMessage(message string, vTagList []string,routingKey stri
 	}
 	result, err := t.client.cmqCall(PublishMessage, params)
 	if err != nil {
-		log.Error("create queue error msg: " + err.Error())
+		log.Println("create queue error msg: " + err.Error())
 		return "",err
 	}
 
 	var m msg
 	if err := json.Unmarshal([]byte(result),&m);err != nil {
-		log.Error("parse json string error, msg: " + err.Error())
+		log.Println("parse json string error, msg: " + err.Error())
 		return "",errors.New("parse json string error!")
 	}
 	code := m.Code
 	if code != 0 {
-		log.Error(fmt.Sprintf("code:%d, %v, RequestId: %v",code,m.Message,m.RequestId))
+		log.Println(fmt.Sprintf("code:%d, %v, RequestId: %v",code,m.Message,m.RequestId))
 		return "",errors.New(fmt.Sprintf("code:%d, %v, RequestId: %v",code,m.Message,m.RequestId))
 	}
 
@@ -143,18 +143,18 @@ func (t *Topic) BatchPublishMessage(vMsgList,vTagList []string,routingKey string
 	result, err := t.client.cmqCall(BatchPublishMessage, params)
 
 	if err != nil {
-		log.Error("create queue error msg: " + err.Error())
+		log.Println("create queue error msg: " + err.Error())
 		return nil,err
 	}
 
 	var m msg
 	if err := json.Unmarshal([]byte(result),&m);err != nil {
-		log.Error("parse json string error, msg: " + err.Error())
+		log.Println("parse json string error, msg: " + err.Error())
 		return nil,errors.New("parse json string error!")
 	}
 	code := m.Code
 	if code != 0 {
-		log.Error(fmt.Sprintf("code:%d, %v, RequestId: %v",code,m.Message,m.RequestId))
+		log.Println(fmt.Sprintf("code:%d, %v, RequestId: %v",code,m.Message,m.RequestId))
 		return nil,errors.New(fmt.Sprintf("code:%d, %v, RequestId: %v",code,m.Message,m.RequestId))
 	}
 
@@ -169,18 +169,18 @@ func (t *Topic) BatchPublishMessage(vMsgList,vTagList []string,routingKey string
 func handleTopicApi(topic *Topic,action string,params map[string]interface{}) error {
 	result, err := topic.client.cmqCall(action, params)
 	if err != nil {
-		log.Error("create queue error msg: " + err.Error())
+		log.Println("create queue error msg: " + err.Error())
 		return err
 	}
 
 	var message msg
 	if err := json.Unmarshal([]byte(result),&message);err != nil {
-		log.Error("parse json string error, msg: " + err.Error())
+		log.Println("parse json string error, msg: " + err.Error())
 		return errors.New("parse json string error!")
 	}
 	code := message.Code
 	if code != 0 {
-		log.Error(fmt.Sprintf("code:%d, %v, RequestId: %v",code,message.Message,message.RequestId))
+		log.Println(fmt.Sprintf("code:%d, %v, RequestId: %v",code,message.Message,message.RequestId))
 		return errors.New(fmt.Sprintf("code:%d, %v, RequestId: %v",code,message.Message,message.RequestId))
 	}
 	return nil

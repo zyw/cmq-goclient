@@ -23,6 +23,8 @@ const (
 	DeleteMessage 			= "DeleteMessage"
 	//批量删除消息
 	BatchDeleteMessage		= "BatchDeleteMessage"
+	SetQueueAttributes		= "SetQueueAttributes"
+	GetQueueAttributes		= "GetQueueAttributes"
 )
 
 type Message struct {
