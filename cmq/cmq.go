@@ -246,8 +246,10 @@ func (cmq *Cmq) ListQueue(searchWord string,offset,limit int, queueList []string
 		return 0,errors.New(fmt.Sprintf("code:%d, %v, RequestId: %v",res.Code,res.Message,res.RequestId))
 	}
 
-	for i,qs := range res.QueueList {
-		queueList[i] = qs.QueueName
+	if queueList != nil {
+		for i,qs := range res.QueueList {
+			queueList[i] = qs.QueueName
+		}
 	}
 
 	return res.TotalCount,nil
