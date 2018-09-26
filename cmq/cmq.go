@@ -388,10 +388,10 @@ func (cmq *Cmq) CreateSubscribe(topicName,subscriptionName,endpoint,protocal str
 	}
 
 	for i,ft := range filterTag {
-		"filterTag."+ strconv.Itoa(i+1) = ft
+		params["filterTag."+ strconv.Itoa(i+1)] = ft
 	}
 	for i,bk := range bindingKey {
-		"bindingKey."+ strconv.Itoa(i+1) = bk
+		params["bindingKey."+ strconv.Itoa(i+1)] = bk
 	}
 
 	return handleCmqApi(cmq,Subscribe,params)
