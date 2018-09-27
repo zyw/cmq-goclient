@@ -19,7 +19,7 @@ func main() {
 
 	client := config.Client(context.Background())
 
-	url := "https://traffic.qhse.cn/api/traffic/vehicleBlack/list"
+	url := ""
 
 	resp, err := client.Post(url, "application/json", strings.NewReader(`{"current":1,"size":10}`))
 	if err != nil {
