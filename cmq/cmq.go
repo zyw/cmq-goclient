@@ -166,11 +166,11 @@ func (meta *QueueMeta) SetRewindSeconds(rewindSeconds int)  {
 }
 
 // 创建队列
-func (cmq *Cmq) CreateQueue(queueName string,meta *QueueMeta) error {
+func (cmq *Cmq) CreateQueue(queueName string,meta *QueueMeta) *CMQError {
 	qn := strings.TrimSpace(queueName)
 	if len(qn) == 0 {
 		log.Println("Invalid parameter:queueName is empty")
-		return errors.New("Invalid parameter:queueName is empty")
+		return NewCMQOpError(CMQError100,errors.New("Invalid parameter:queueName is empty"),CreateQueue)
 	}
 	params := map[string]interface{} {
 		"queueName":qn,
@@ -196,11 +196,11 @@ func (cmq *Cmq) CreateQueue(queueName string,meta *QueueMeta) error {
 	return handleCmqApi(cmq,CreateQueue, params)
 }
 // 删除队列
-func (cmq *Cmq) DeleteQueue(queueName string) error {
+func (cmq *Cmq) DeleteQueue(queueName string) *CMQError {
 	qn := strings.TrimSpace(queueName)
 	if len(qn) == 0 {
 		log.Println("Invalid parameter:queueName is empty")
-		return errors.New("Invalid parameter:queueName is empty")
+		return NewCMQOpError(CMQError100,errors.New("Invalid parameter:queueName is empty"),DeleteQueue)
 	}
 
 	params := map[string]interface{} {
@@ -422,7 +422,7 @@ func (cmq *Cmq) DeleteSubscribe(topicName,subscriptionName string) error {
 	return handleCmqApi(cmq,Unsubscribe,params)
 }
 
-func handleCmqApi(cmq *Cmq,action string,params map[string]interface{}) error {
+func handleCmqApi(cmq *Cmq,action string,params map[string]interface{}) *CMQError {
 	result, err := cmq.client.cmqCall(action, params)
 	if err != nil {
 		log.Println("create queue error msg: " + err.Error())
@@ -432,12 +432,12 @@ func handleCmqApi(cmq *Cmq,action string,params map[string]interface{}) error {
 	var message msg
 	if err := json.Unmarshal([]byte(result),&message);err != nil {
 		log.Println("parse json string error, msg: " + err.Error())
-		return errors.New("parse json string error!")
+		return NewCMQOpError(CMQError102,jsonUnmarshal,action)
 	}
 	code := message.Code
 	if code != 0 {
 		log.Println(fmt.Sprintf("code:%d, %v, RequestId: %v",code,message.Message,message.RequestId))
-		return errors.New(fmt.Sprintf("code:%d, %v, RequestId: %v",code,message.Message,message.RequestId))
+		return NewCMQOpError(erron(code),errors.New(message.Message),action)
 	}
 	return nil
 }
