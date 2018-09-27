@@ -143,12 +143,12 @@ func newCmqClient(account *CmqConfig) *Client {
 }
 
 // 调用CMQ API完成操作，比如：发送消息读取消息，创建队列创建主题
-func (cc *Client) cmqCall(action string,params map[string]interface{}) (result string,err error)  {
-	if action == "" {
-		return "",errors.New("action param is Zero value")
+func (cc *Client) cmqCall(action string,params map[string]interface{}) (result string,e *CMQError)  {
+	if len(action) == 0 {
+		return "",NewCMQOpError(CMQError100,errors.New("action param is Zero value"),action)
 	}
 	if params == nil || len(params) == 0 {
-		return "",errors.New("params is nil or len = 0")
+		return "",NewCMQOpError(CMQError100,errors.New("params is nil or len = 0"),action)
 	}
 
 	params["Action"] = action
@@ -180,7 +180,7 @@ func (cc *Client) cmqCall(action string,params map[string]interface{}) (result s
 	if cc.account.method == "GET" {
 		url = cc.account.endpoint + cc.account.path + "?" + util.MapToURLParam(params,true)
 		if len(url) > 2048 {
-			return "",errors.New("URL length is larger than 2K when use GET method")
+			return "",NewCMQOpError(CMQError100,errors.New("URL length is larger than 2K when use GET method"),action)
 		}
 	} else {
 		url = cc.account.endpoint + cc.account.path
@@ -200,20 +200,20 @@ func (cc *Client) cmqCall(action string,params map[string]interface{}) (result s
 	return r,nil
 }
 
-func httpRequest(method,url,param string,timeout int) (result string,err error) {
+func httpRequest(method,url,param string,timeout int) (result string,e *CMQError) {
 	client := &http.Client{
 		Timeout: time.Duration(timeout) * time.Second,
 	}
 	req, err := http.NewRequest(method, url, strings.NewReader(param))
 	if err != nil {
-		return "",err
+		return "",NewCMQError(CMQError101,err)
 	}
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 
 	resp, err := client.Do(req)
 
 	if err != nil {
-		return "",err
+		return "",NewCMQError(CMQError101,err)
 	}
 
 	defer resp.Body.Close()
@@ -221,7 +221,7 @@ func httpRequest(method,url,param string,timeout int) (result string,err error) 
 	body, err := ioutil.ReadAll(resp.Body)
 
 	if err != nil {
-		return "",err
+		return "",NewCMQError(CMQError101,err)
 	}
 	return string(body),nil
 }

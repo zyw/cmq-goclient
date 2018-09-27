@@ -14,7 +14,7 @@ type Queue struct {
 }
 
 // 设置队列属性
-func (q *Queue) SetQueueAttributes(meta *QueueMeta) error {
+func (q *Queue) SetQueueAttributes(meta *QueueMeta) *CMQError {
 
 	params := map[string]interface{} {
 		"queueName": q.queueName,
@@ -46,7 +46,7 @@ func (q *Queue) SetQueueAttributes(meta *QueueMeta) error {
 }
 
 //获取队列属性
-func (q *Queue) GetQueueAttributes() (*QueueMeta,error) {
+func (q *Queue) GetQueueAttributes() (*QueueMeta,*CMQError) {
 	params := map[string]interface{} {
 		"queueName":q.queueName,
 	}
@@ -60,12 +60,12 @@ func (q *Queue) GetQueueAttributes() (*QueueMeta,error) {
 	var res map[string]interface{}
 	if err := json.Unmarshal([]byte(result),&res);err != nil {
 		log.Println("parse json string error, msg: " + err.Error())
-		return nil,errors.New("parse json string error!")
+		return nil,NewCMQOpError(CMQError102,jsonUnmarshal,GetQueueAttributes)
 	}
 	code := res["code"].(int)
 	if code != 0 {
 		log.Println(fmt.Sprintf("code:%d, %v, RequestId: %v",code,res["message"],res["requestId"]))
-		return nil,errors.New(fmt.Sprintf("code:%d, %v, RequestId: %v",code,res["message"],res["requestId"]))
+		return nil,NewCMQOpError(erron(code),errors.New(res["message"].(string)),GetQueueAttributes)
 	}
 
 	meta := &QueueMeta{
@@ -87,7 +87,7 @@ func (q *Queue) GetQueueAttributes() (*QueueMeta,error) {
 	return meta,nil;
 }
 
-func handleQueueApi(q *Queue,action string,params map[string]interface{}) error {
+func handleQueueApi(q *Queue,action string,params map[string]interface{}) *CMQError {
 	result, err := q.client.cmqCall(action, params)
 	if err != nil {
 		log.Println("create queue error msg: " + err.Error())
@@ -97,12 +97,12 @@ func handleQueueApi(q *Queue,action string,params map[string]interface{}) error 
 	var message msg
 	if err := json.Unmarshal([]byte(result),&message);err != nil {
 		log.Println("parse json string error, msg: " + err.Error())
-		return errors.New("parse json string error!")
+		return NewCMQOpError(CMQError102,jsonUnmarshal,action)
 	}
 	code := message.Code
 	if code != 0 {
 		log.Println(fmt.Sprintf("code:%d, %v, RequestId: %v",code,message.Message,message.RequestId))
-		return errors.New(fmt.Sprintf("code:%d, %v, RequestId: %v",code,message.Message,message.RequestId))
+		return NewCMQOpError(erron(code),errors.New(message.Message),action)
 	}
 	return nil
 }
@@ -110,14 +110,14 @@ func handleQueueApi(q *Queue,action string,params map[string]interface{}) error 
 // 发消息
 // msgBody 消息正文。至少 1 Byte，最大长度受限于设置的队列消息最大长度属性。
 // delaySeconds 单位为秒，表示该消息发送到队列后，需要延时多久用户才可见该消息。传0表示立即可见
-func (q *Queue) SendMessage(msgBody string,delaySeconds int) (result string,err error) {
+func (q *Queue) SendMessage(msgBody string,delaySeconds int) (result string,err *CMQError) {
 
-	if msgBody == "" {
-		return "",errors.New("msgBoy is empty!")
+	if len(msgBody) == 0 {
+		return "",NewCMQOpError(CMQError100,errors.New("msgBoy is empty!"),SendMessage)
 	}
 
 	if delaySeconds < 0 {
-		return "",errors.New("delaySeconds is < 0!")
+		return "",NewCMQOpError(CMQError100,errors.New("delaySeconds is < 0!"),SendMessage)
 	}
 
 	params := map[string]interface{} {
@@ -133,11 +133,12 @@ func (q *Queue) SendMessage(msgBody string,delaySeconds int) (result string,err 
 	}
 	var message msg
 	if err := json.Unmarshal([]byte(r),&message);err != nil {
-		return "",errors.New("parse json string error!")
+		return "",NewCMQOpError(CMQError102,jsonUnmarshal,SendMessage)
 	}
 	code := message.Code
 	if code != 0 {
-		return "",errors.New(fmt.Sprintf("code:%d, %v, RequestId: %v",code,message.Message,message.RequestId))
+		log.Println("parse json string error, msg: " + err.Error())
+		return "",NewCMQOpError(erron(code),errors.New(message.Message),SendMessage)
 	}
 
 	return message.MsgId,nil
@@ -148,10 +149,10 @@ func (q *Queue) SendMessage(msgBody string,delaySeconds int) (result string,err 
 // 为方便用户使用，n从0开始或者从1开始都可以，但必须连续，例如发送两条消息，可以是(msgBody.0, msgBody.1)，或者(msgBody.1, msgBody.2)。
 // 注意：由于目前限制所有消息大小总和（不包含消息头和其他参数，仅msgBody）不超过 64k，所以建议提前规划好批量发送的数量。
 // delaySeconds 单位为秒，表示该消息发送到队列后，需要延时多久用户才可见。（该延时对一批消息有效，不支持多对多映射）
-func (q *Queue) BatchSendMessage(msgBodys []string,delaySeconds int) (result []string,err error)  {
+func (q *Queue) BatchSendMessage(msgBodys []string,delaySeconds int) (result []string,err *CMQError)  {
 
 	if msgBodys == nil || len(msgBodys) == 0 || len(msgBodys) > 16 {
-		return nil,errors.New("Error: message size is empty or more than 16")
+		return nil,NewCMQOpError(CMQError100,errors.New("Error: message size is empty or more than 16"),BatchSendMessage)
 	}
 
 	params := map[string]interface{} {
@@ -174,12 +175,12 @@ func (q *Queue) BatchSendMessage(msgBodys []string,delaySeconds int) (result []s
 	var message msg
 
 	if err := json.Unmarshal([]byte(r),&message);err != nil {
-		log.Println(err.Error())
-		return nil,err
+		log.Println(fmt.Sprintf("code:%d, %v, RequestId: %v",message.Code,message.Message,message.RequestId))
+		return nil,NewCMQOpError(CMQError102,jsonUnmarshal,BatchSendMessage)
 	}
 
 	if message.Code != 0 {
-		return nil,errors.New(fmt.Sprintf("code:%d, %v, RequestId: %v",message.Code,message.Message,message.RequestId))
+		return nil,NewCMQOpError(erron(message.Code),errors.New(message.Message),BatchSendMessage)
 	}
 
 	var res []string
@@ -193,7 +194,7 @@ func (q *Queue) BatchSendMessage(msgBodys []string,delaySeconds int) (result []s
 
 //接受消息
 // pollingWaitSeconds 本次请求的长轮询等待时间。取值范围 0-30 秒，如果不设置该参数，则默认使用队列属性中的 pollingWaitSeconds 值。
-func (q *Queue) ReceiveMessage(pollingWaitSeconds int) (msg *Message,err error) {
+func (q *Queue) ReceiveMessage(pollingWaitSeconds int) (msg *Message,err *CMQError) {
 	params := map[string]interface{} {
 		"queueName":q.queueName,
 	}
@@ -212,11 +213,11 @@ func (q *Queue) ReceiveMessage(pollingWaitSeconds int) (msg *Message,err error) 
 	var message Message
 
 	if err := json.Unmarshal([]byte(result),&message);err != nil {
-		return nil,errors.New("parse json string error!")
+		return nil,NewCMQOpError(CMQError102,jsonUnmarshal,ReceiveMessage)
 	}
 
 	if message.Code != 0 {
-		return nil,errors.New(fmt.Sprintf("code:%d, %v, RequestId: %v",message.Code,message.Message,message.RequestId))
+		return nil,NewCMQOpError(erron(message.Code),errors.New(message.Message),ReceiveMessage)
 	}
 
 	return &message,nil;
@@ -225,7 +226,7 @@ func (q *Queue) ReceiveMessage(pollingWaitSeconds int) (msg *Message,err error) 
 // 批量接收消息
 // numOfMsg               准备获取消息数
 // pollingWaitSeconds     请求最长的Polling等待时间
-func (q *Queue) BatchReceiveMessage(numOfMsg,pollingWaitSeconds int) (result []Message,err error) {
+func (q *Queue) BatchReceiveMessage(numOfMsg,pollingWaitSeconds int) (result []Message,err *CMQError) {
 
 	params := map[string]interface{} {
 		"queueName":q.queueName,
@@ -247,11 +248,11 @@ func (q *Queue) BatchReceiveMessage(numOfMsg,pollingWaitSeconds int) (result []M
 	var msg batchMessage
 
 	if err := json.Unmarshal([]byte(r),&msg);err != nil {
-		return nil,errors.New("parse json string error!")
+		return nil,NewCMQOpError(CMQError102,jsonUnmarshal,BatchReceiveMessage)
 	}
 
 	if msg.Code != 0 {
-		return nil,errors.New(fmt.Sprintf("code:%d, %v, RequestId: %v",msg.Code,msg.Message,msg.RequestId))
+		return nil,NewCMQOpError(erron(msg.Code),errors.New(msg.Message),BatchReceiveMessage)
 	}
 
 	msgs := make([]Message,len(msg.MsgInfoList))
@@ -276,7 +277,7 @@ func (q *Queue) BatchReceiveMessage(numOfMsg,pollingWaitSeconds int) (result []M
 
 // 删除消息
 // receiptHandle 上次消费返回唯一的消息句柄，用于删除消息。
-func (q *Queue) DeleteMessage(receiptHandle string) error {
+func (q *Queue) DeleteMessage(receiptHandle string) *CMQError {
 
 	params := map[string]interface{} {
 		"queueName":q.queueName,
@@ -292,10 +293,10 @@ func (q *Queue) DeleteMessage(receiptHandle string) error {
 
 	if err := json.Unmarshal([]byte(result),&message);err != nil {
 		log.Println(err.Error())
-		return err
+		return NewCMQOpError(CMQError102,jsonUnmarshal,DeleteMessage)
 	}
 	if message.Code != 0 {
-		return errors.New(fmt.Sprintf("code:%d, %v, RequestId: %v",message.Code,message.Message,message.RequestId))
+		return NewCMQOpError(erron(message.Code),errors.New(message.Message),DeleteMessage)
 	}
 
 	return nil
@@ -303,10 +304,10 @@ func (q *Queue) DeleteMessage(receiptHandle string) error {
 
 // 批量删除消息
 // receiptHandle 上次消费返回唯一的消息句柄，用于删除消息。
-func (q *Queue) BatchDeleteMessage(receiptHandles []string) error {
+func (q *Queue) BatchDeleteMessage(receiptHandles []string) *CMQError {
 
 	if receiptHandles == nil || len(receiptHandles) == 0 {
-		return errors.New("receiptHandles is nil or empty!")
+		return NewCMQOpError(CMQError100,errors.New("receiptHandles is nil or empty!"),BatchDeleteMessage)
 	}
 
 	params := map[string]interface{} {
@@ -326,10 +327,10 @@ func (q *Queue) BatchDeleteMessage(receiptHandles []string) error {
 
 	if err := json.Unmarshal([]byte(result),&message);err != nil {
 		log.Println(err.Error())
-		return err
+		return NewCMQOpError(CMQError102,jsonUnmarshal,BatchDeleteMessage)
 	}
 	if message.Code != 0 {
-		return errors.New(fmt.Sprintf("code:%d, %v, RequestId: %v",message.Code,message.Message,message.RequestId))
+		return NewCMQOpError(erron(message.Code),errors.New(message.Message),BatchDeleteMessage)
 	}
 
 	return nil
