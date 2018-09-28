@@ -36,9 +36,9 @@ type TopicMeta struct {
 	filterType				int
 }
 
-func (t *Topic) SetTopicAttributes(maxMsgSize int) error {
+func (t *Topic) SetTopicAttributes(maxMsgSize int) *CMQError {
 	if maxMsgSize < 1024 || maxMsgSize > 1048576 {
-		return errors.New("Invalid parameter maxMsgSize < 1KB or maxMsgSize > 1024KB")
+		return NewCMQOpError(CMQError100,errors.New("Invalid parameter maxMsgSize < 1KB or maxMsgSize > 1024KB"),SetTopicAttributes)
 	}
 
 	params := map[string]interface{} {
@@ -49,7 +49,7 @@ func (t *Topic) SetTopicAttributes(maxMsgSize int) error {
 	return handleTopicApi(t,SetTopicAttributes,params)
 }
 
-func (t *Topic) GetTopicAttributes() (*TopicMeta,error) {
+func (t *Topic) GetTopicAttributes() (*TopicMeta,*CMQError) {
 	params := map[string]interface{} {
 		"topicName":t.topicName,
 	}
@@ -60,12 +60,12 @@ func (t *Topic) GetTopicAttributes() (*TopicMeta,error) {
 	var res map[string]interface{}
 	if err := json.Unmarshal([]byte(result),&res);err != nil {
 		log.Println("parse json string error, msg: " + err.Error())
-		return nil,errors.New("parse json string error!")
+		return nil,NewCMQOpError(CMQError102,jsonUnmarshal,GetTopicAttributes)
 	}
 	code := res["code"].(int)
 	if code != 0 {
 		log.Println(fmt.Sprintf("code:%d, %v, RequestId: %v",code,res["message"],res["requestId"]))
-		return nil,errors.New(fmt.Sprintf("code:%d, %v, RequestId: %v",code,res["message"],res["requestId"]))
+		return nil,NewCMQOpError(erron(code),errors.New(res["message"].(string)),GetTopicAttributes)
 	}
 
 	return &TopicMeta{
@@ -89,7 +89,7 @@ func (t *Topic) GetTopicAttributes() (*TopicMeta,error) {
 //消息发送到 topic 类型的 exchange 上时不能随意指定 routingKey。需要符合上面的格式要求，一个由订阅者指定的带有 routingKey 的消息将会推送给所有 BindingKey 能与之匹配的消费者，这种匹配情况有两种关系：
 //1 *（星号），可以替代一个单词（一串连续的字母串）；
 //2 #（井号）：可以匹配一个或多个字符。
-func (t *Topic) PublishMessage(message string, vTagList []string,routingKey string) (string,error) {
+func (t *Topic) PublishMessage(message string, vTagList []string,routingKey string) (string,*CMQError) {
 	params := map[string]interface{} {
 		"topicName": t.topicName,
 		"msgBody": message,
@@ -111,18 +111,18 @@ func (t *Topic) PublishMessage(message string, vTagList []string,routingKey stri
 	var m msg
 	if err := json.Unmarshal([]byte(result),&m);err != nil {
 		log.Println("parse json string error, msg: " + err.Error())
-		return "",errors.New("parse json string error!")
+		return "",NewCMQOpError(CMQError102,jsonUnmarshal,PublishMessage)
 	}
 	code := m.Code
 	if code != 0 {
 		log.Println(fmt.Sprintf("code:%d, %v, RequestId: %v",code,m.Message,m.RequestId))
-		return "",errors.New(fmt.Sprintf("code:%d, %v, RequestId: %v",code,m.Message,m.RequestId))
+		return "",NewCMQOpError(erron(code),errors.New(m.Message),PublishMessage)
 	}
 
 	return m.MsgId,nil
 }
 
-func (t *Topic) BatchPublishMessage(vMsgList,vTagList []string,routingKey string) ([]string,error){
+func (t *Topic) BatchPublishMessage(vMsgList,vTagList []string,routingKey string) ([]string,*CMQError){
 
 	params := map[string]interface{} {
 		"topicName":t.topicName,
@@ -150,12 +150,12 @@ func (t *Topic) BatchPublishMessage(vMsgList,vTagList []string,routingKey string
 	var m msg
 	if err := json.Unmarshal([]byte(result),&m);err != nil {
 		log.Println("parse json string error, msg: " + err.Error())
-		return nil,errors.New("parse json string error!")
+		return nil,NewCMQOpError(CMQError102,jsonUnmarshal,BatchPublishMessage)
 	}
 	code := m.Code
 	if code != 0 {
 		log.Println(fmt.Sprintf("code:%d, %v, RequestId: %v",code,m.Message,m.RequestId))
-		return nil,errors.New(fmt.Sprintf("code:%d, %v, RequestId: %v",code,m.Message,m.RequestId))
+		return nil,NewCMQOpError(erron(code),errors.New(m.Message),BatchPublishMessage)
 	}
 
 	var list = make([]string,len(m.MsgList))
@@ -166,7 +166,7 @@ func (t *Topic) BatchPublishMessage(vMsgList,vTagList []string,routingKey string
 	return list,nil
 }
 
-func handleTopicApi(topic *Topic,action string,params map[string]interface{}) error {
+func handleTopicApi(topic *Topic,action string,params map[string]interface{}) *CMQError {
 	result, err := topic.client.cmqCall(action, params)
 	if err != nil {
 		log.Println("create queue error msg: " + err.Error())
@@ -176,12 +176,12 @@ func handleTopicApi(topic *Topic,action string,params map[string]interface{}) er
 	var message msg
 	if err := json.Unmarshal([]byte(result),&message);err != nil {
 		log.Println("parse json string error, msg: " + err.Error())
-		return errors.New("parse json string error!")
+		return NewCMQOpError(CMQError102,jsonUnmarshal,action)
 	}
 	code := message.Code
 	if code != 0 {
 		log.Println(fmt.Sprintf("code:%d, %v, RequestId: %v",code,message.Message,message.RequestId))
-		return errors.New(fmt.Sprintf("code:%d, %v, RequestId: %v",code,message.Message,message.RequestId))
+		return NewCMQOpError(erron(message.Code),errors.New(message.Message),action)
 	}
 	return nil
 }

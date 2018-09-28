@@ -60,7 +60,7 @@ type SubscriptionList struct {
 	Endpoint		 string		`json:"endpoint"`
 }
 
-func (this *Subscription) ClearFilterTags() error {
+func (this *Subscription) ClearFilterTags() *CMQError {
 
 	params := map[string]interface{} {
 		"topicName" : this.topicName,
@@ -71,7 +71,7 @@ func (this *Subscription) ClearFilterTags() error {
 }
 
 // 修改订阅属性
-func (this *Subscription) SetSubscriptionAttributes(meta SubscriptionMeta) error {
+func (this *Subscription) SetSubscriptionAttributes(meta SubscriptionMeta) *CMQError {
 	params := map[string]interface{} {
 		"topicName" : this.topicName,
 		"subscriptionName" : this.subscriptionName,
@@ -97,7 +97,7 @@ func (this *Subscription) SetSubscriptionAttributes(meta SubscriptionMeta) error
 }
 
 // 获取订阅属性
-func (this *Subscription) GetSubscriptionAttributes() (*SubscriptionMeta,error) {
+func (this *Subscription) GetSubscriptionAttributes() (*SubscriptionMeta,*CMQError) {
 
 	params := map[string]interface{} {
 		"topicName" : this.topicName,
@@ -112,12 +112,12 @@ func (this *Subscription) GetSubscriptionAttributes() (*SubscriptionMeta,error) 
 	var res map[string]interface{}
 	if err := json.Unmarshal([]byte(result),&res);err != nil {
 		log.Println("parse json string error, msg: " + err.Error())
-		return nil,errors.New("parse json string error!")
+		return nil,NewCMQOpError(CMQError102,jsonUnmarshal,GetSubscriptionAttributes)
 	}
 	code := res["code"].(int)
 	if code != 0 {
 		log.Println(fmt.Sprintf("code:%d, %v, RequestId: %v",code,res["message"],res["requestId"]))
-		return nil,errors.New(fmt.Sprintf("code:%d, %v, RequestId: %v",code,res["message"],res["requestId"]))
+		return nil,NewCMQOpError(erron(code),errors.New(res["message"].(string)),GetSubscriptionAttributes)
 	}
 
 	var meta *SubscriptionMeta
@@ -177,7 +177,7 @@ func (this *Subscription) GetSubscriptionAttributes() (*SubscriptionMeta,error) 
 // searchWord 用于过滤订阅列表，后台用模糊匹配的方式来返回符合条件的订阅列表。如果不填该参数，默认返回帐号下的所有订阅。
 // offset 分页时本页获取订阅列表的起始位置。如果填写了该值，必须也要填写 limit。该值缺省时，后台取默认值 0。取值范围 0-1000。
 // limit 分页时本页获取订阅的个数，该参数取值范围 0-100。如果不传递该参数，则该参数默认为 20。
-func (this *Subscription) ListSubscription(offset,limit int,searchWord string,vSubscriptionList []string) (int,error) {
+func (this *Subscription) ListSubscription(offset,limit int,searchWord string,vSubscriptionList []string) (int,*CMQError) {
 	params := map[string]interface{} {
 		"topicName":this.topicName,
 	}
@@ -199,13 +199,13 @@ func (this *Subscription) ListSubscription(offset,limit int,searchWord string,vS
 	var sr SubscriptionResult
 	if err := json.Unmarshal([]byte(result),&sr);err != nil {
 		log.Println("parse json string error, msg: " + err.Error())
-		return 0,errors.New("parse json string error!")
+		return 0,NewCMQOpError(CMQError102,jsonUnmarshal,ListSubscriptionByTopic)
 	}
 
 	code := sr.Code
 	if code != 0 {
 		log.Println(fmt.Sprintf("code:%d, %v, RequestId: %v",code,sr.Message,sr.RequestId))
-		return 0,errors.New(fmt.Sprintf("code:%d, %v, RequestId: %v",code,sr.Message,sr.RequestId))
+		return 0,NewCMQOpError(erron(code),errors.New(sr.Message),ListSubscriptionByTopic)
 	}
 
 	if vSubscriptionList != nil {
@@ -217,7 +217,7 @@ func (this *Subscription) ListSubscription(offset,limit int,searchWord string,vS
 	return sr.TotalCount,nil
 }
 
-func handleSubscriptionApi(sub *Subscription,action string,params map[string]interface{}) error {
+func handleSubscriptionApi(sub *Subscription,action string,params map[string]interface{}) *CMQError {
 	result, err := sub.client.cmqCall(action, params)
 	if err != nil {
 		log.Println("create queue error msg: " + err.Error())
@@ -227,12 +227,12 @@ func handleSubscriptionApi(sub *Subscription,action string,params map[string]int
 	var message msg
 	if err := json.Unmarshal([]byte(result),&message);err != nil {
 		log.Println("parse json string error, msg: " + err.Error())
-		return errors.New("parse json string error!")
+		return NewCMQOpError(CMQError102,jsonUnmarshal,action)
 	}
 	code := message.Code
 	if code != 0 {
 		log.Println(fmt.Sprintf("code:%d, %v, RequestId: %v",code,message.Message,message.RequestId))
-		return errors.New(fmt.Sprintf("code:%d, %v, RequestId: %v",code,message.Message,message.RequestId))
+		return NewCMQOpError(erron(message.Code),errors.New(message.Message),action)
 	}
 	return nil
 }

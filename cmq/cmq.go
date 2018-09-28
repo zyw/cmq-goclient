@@ -214,7 +214,7 @@ func (cmq *Cmq) DeleteQueue(queueName string) *CMQError {
 // offset 分页时本页获取队列列表的起始位置。如果填写了该值，必须也要填写 limit 。该值缺省时，后台取默认值 0
 // limit 分页时本页获取队列的个数，如果不传递该参数，则该参数默认为 20，最大值为 50。
 // queueList 引用类型，存放查询到的queue列表，保存queueName
-func (cmq *Cmq) ListQueue(searchWord string,offset,limit int, queueList []string ) (int,error) {
+func (cmq *Cmq) ListQueue(searchWord string,offset,limit int, queueList []string ) (int,*CMQError) {
 
 	params := map[string]interface{}{}
 
@@ -239,11 +239,11 @@ func (cmq *Cmq) ListQueue(searchWord string,offset,limit int, queueList []string
 	var res ListQueueResult
 	if err := json.Unmarshal([]byte(result),&res);err != nil {
 		log.Println("parse json string error, msg: " + err.Error())
-		return 0,errors.New("parse json string error!")
+		return 0,NewCMQOpError(CMQError102,jsonUnmarshal,ListQueue)
 	}
 	if res.Code != 0 {
 		log.Println(fmt.Sprintf("code:%d, %v, RequestId: %v",res.Code,res.Message,res.RequestId))
-		return 0,errors.New(fmt.Sprintf("code:%d, %v, RequestId: %v",res.Code,res.Message,res.RequestId))
+		return 0,NewCMQOpError(erron(res.Code),errors.New(res.Message),ListQueue)
 	}
 
 	if queueList != nil {
@@ -263,15 +263,15 @@ func (cmq *Cmq) ListQueue(searchWord string,offset,limit int, queueList []string
 //		filterType =1 或为空， 表示该主题下所有订阅使用 filterTag 标签过滤；
 //		filterType =2 表示用户使用 bindingKey 过滤。
 //		注：该参数设定之后不可更改。
-func (cmq *Cmq) CreateTopic(topicName string,maxMsgSize,filterType int) error {
+func (cmq *Cmq) CreateTopic(topicName string,maxMsgSize,filterType int) *CMQError {
 	tn := strings.TrimSpace(topicName)
 
 	if len(tn) == 0 {
-		return errors.New("Invalid parameter:topicName is empty")
+		return NewCMQOpError(CMQError100,errors.New("Invalid parameter:topicName is empty"),CreateTopic)
 	}
 
 	if maxMsgSize < 1024 || maxMsgSize > 1048576 {
-		return errors.New("Invalid parameter: maxMsgSize > 1024KB or maxMsgSize < 1KB")
+		return NewCMQOpError(CMQError100,errors.New("Invalid parameter: maxMsgSize > 1024KB or maxMsgSize < 1KB"),CreateTopic)
 	}
 
 	params := map[string]interface{} {
@@ -283,10 +283,10 @@ func (cmq *Cmq) CreateTopic(topicName string,maxMsgSize,filterType int) error {
 	return handleCmqApi(cmq,CreateTopic,params)
 }
 
-func (cmq *Cmq) DeleteTopic(topicName string) error {
+func (cmq *Cmq) DeleteTopic(topicName string) *CMQError {
 	tn := strings.TrimSpace(topicName)
 	if len(tn) == 0 {
-		return errors.New("Invalid parameter:topicName is empty")
+		return NewCMQOpError(CMQError100,errors.New("Invalid parameter:topicName is empty"),DeleteTopic)
 	}
 
 	params := map[string]interface{} {
@@ -300,7 +300,7 @@ func (cmq *Cmq) DeleteTopic(topicName string) error {
 // searchWord 用于过滤主题列表，后台用模糊匹配的方式来返回符合条件的主题列表。如果不填该参数，默认返回帐号下的所有主题。
 // offset 分页时本页获取主题列表的起始位置。如果填写了该值，必须也要填写 limit 。该值缺省时，后台取默认值 0
 // limit 分页时本页获取主题的个数，如果不传递该参数，则该参数默认为 20，最大值为 50。
-func (cmq *Cmq) ListTopic(searchWord string, vTopicList []string ,offset,limit int) (int,error) {
+func (cmq *Cmq) ListTopic(searchWord string, vTopicList []string ,offset,limit int) (int,*CMQError) {
 	params := map[string]interface{}{}
 
 	if len(searchWord) != 0 {
@@ -321,11 +321,11 @@ func (cmq *Cmq) ListTopic(searchWord string, vTopicList []string ,offset,limit i
 	var res ListTopicResult
 	if err := json.Unmarshal([]byte(result),&res);err != nil {
 		log.Println("parse json string error, msg: " + err.Error())
-		return 0,errors.New("parse json string error!")
+		return 0,NewCMQOpError(CMQError102,jsonUnmarshal,ListTopic)
 	}
 	if res.Code != 0 {
 		log.Println(fmt.Sprintf("code:%d, %v, RequestId: %v",res.Code,res.Message,res.RequestId))
-		return 0,errors.New(fmt.Sprintf("code:%d, %v, RequestId: %v",res.Code,res.Message,res.RequestId))
+		return 0,NewCMQOpError(erron(res.Code),errors.New(res.Message),ListTopic)
 	}
 
 	if vTopicList != nil {
@@ -347,39 +347,39 @@ func (cmq *Cmq) ListTopic(searchWord string, vTopicList []string ,offset,limit i
 // bindingKey.n bindingKey 数量不超过 5 个， 每个 bindingKey 长度不超过 64 字节，该字段表示订阅接收消息的过滤策略，每个 bindingKey 最多含有 15 个“.”， 即最多 16 个词组。
 func (cmq *Cmq) CreateSubscribe(topicName,subscriptionName,endpoint,protocal string,
 	filterTag, bindingKey []string,
-	notifyStrategy,notifyContentFormat string) error {
+	notifyStrategy,notifyContentFormat string) *CMQError {
 
 	tn := strings.TrimSpace(topicName)
 	if len(tn) == 0 {
-		return errors.New("Invalid parameter:topicName is empty")
+		return NewCMQOpError(CMQError100,errors.New("Invalid parameter:topicName is empty"),Subscribe)
 	}
 
 	ssn := strings.TrimSpace(subscriptionName)
 	if len(ssn) == 0 {
-		return errors.New("Invalid parameter:subscriptionName is empty")
+		return NewCMQOpError(CMQError100,errors.New("Invalid parameter:subscriptionName is empty"),Subscribe)
 	}
 
 	ep := strings.TrimSpace(endpoint)
 	if len(ep) == 0 {
-		return errors.New("Invalid parameter:endpoint is empty")
+		return NewCMQOpError(CMQError100,errors.New("Invalid parameter:endpoint is empty"),Subscribe)
 	}
 	p := strings.TrimSpace(protocal)
 	if len(p) == 0 {
-		return errors.New("Invalid parameter:protocal is empty")
+		return NewCMQOpError(CMQError100,errors.New("Invalid parameter:protocal is empty"),Subscribe)
 	}
 
 	ns := strings.TrimSpace(notifyStrategy)
 	if len(ns) == 0 {
-		return errors.New("Invalid parameter:NotifyStrategy is empty")
+		return NewCMQOpError(CMQError100,errors.New("Invalid parameter:NotifyStrategy is empty"),Subscribe)
 	}
 
 	ncf := strings.TrimSpace(notifyContentFormat)
 	if len(ncf) == 0 {
-		return errors.New("Invalid parameter:NotifyContentFormat is empty")
+		return NewCMQOpError(CMQError100,errors.New("Invalid parameter:NotifyContentFormat is empty"),Subscribe)
 	}
 
 	if len(filterTag) > 5 {
-		return errors.New("Invalid parameter: Tag number > 5")
+		return NewCMQOpError(CMQError100,errors.New("Invalid parameter: Tag number > 5"),Subscribe)
 	}
 
 	params := map[string]interface{} {
@@ -403,15 +403,15 @@ func (cmq *Cmq) CreateSubscribe(topicName,subscriptionName,endpoint,protocal str
 // 删除订阅
 // topicName 主题名字，在单个地域同一帐号下唯一。主题名称是一个不超过 64 个字符的字符串，必须以字母为首字符，剩余部分可以包含字母、数字和横划线(-)。
 // subscriptionName 订阅名字，在单个地域同一帐号的同一主题下唯一。订阅名称是一个不超过 64 个字符的字符串，必须以字母为首字符，剩余部分可以包含字母、数字和横划线(-)。
-func (cmq *Cmq) DeleteSubscribe(topicName,subscriptionName string) error {
+func (cmq *Cmq) DeleteSubscribe(topicName,subscriptionName string) *CMQError {
 	tn := strings.TrimSpace(topicName)
 	if len(tn) == 0 {
-		return errors.New("Invalid parameter:topicName is empty")
+		return NewCMQOpError(CMQError100,errors.New("Invalid parameter:topicName is empty"),Unsubscribe)
 	}
 
 	ssn := strings.TrimSpace(subscriptionName)
 	if len(ssn) == 0 {
-		return errors.New("Invalid parameter:subscriptionName is empty")
+		return NewCMQOpError(CMQError100,errors.New("Invalid parameter:subscriptionName is empty"),Unsubscribe)
 	}
 
 	params := map[string]interface{} {
