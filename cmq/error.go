@@ -2,17 +2,21 @@ package cmq
 
 import (
 	"syscall"
-	"fmt"
 	"errors"
+	"fmt"
 )
 
 const (
 	//参数错误
-	CMQError100		= syscall.Errno(100)
-	//网络请求错误
-	CMQError101		= syscall.Errno(101)
+	CMQError100			= syscall.Errno(100)
+	//(NewRequest错误)网络请求错误
+	CMQError1011		= syscall.Errno(1011)
+	//发起调用错误（client.Do）
+	CMQError1012		= syscall.Errno(1012)
+	//读取response body错误
+	CMQError1013		= syscall.Errno(1013)
 	//JSON解析失败
-	CMQError102		= syscall.Errno(102)
+	CMQError102			= syscall.Errno(102)
 )
 
 var (
@@ -36,9 +40,9 @@ type CMQError struct {
 
 func (e *CMQError) Error() string {
 	if len(e.Op) == 0 {
-		return fmt.Sprintf("调用腾讯CMQ接口错误，错误码：%d，错误消息：%s",e.Code,e)
+		return fmt.Sprintf("调用腾讯CMQ接口错误，错误码：%d，错误消息：%s",e.Code,e.Err)
 	}
-	return fmt.Sprintf("调用腾讯CMQ接口错误，错误码：%d，操作类型：%s，错误消息：%s",e.Code,e.Op,e)
+	return fmt.Sprintf("调用腾讯CMQ接口错误，错误码：%d，操作类型：%s，错误消息：%s",e.Code,e.Op,e.Err)
 }
 
 func NewCMQError(code syscall.Errno,err error) *CMQError {

@@ -206,14 +206,14 @@ func httpRequest(method,url,param string,timeout int) (result string,e *CMQError
 	}
 	req, err := http.NewRequest(method, url, strings.NewReader(param))
 	if err != nil {
-		return "",NewCMQError(CMQError101,err)
+		return "",NewCMQError(CMQError1011,err)
 	}
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 
 	resp, err := client.Do(req)
 
 	if err != nil {
-		return "",NewCMQError(CMQError101,err)
+		return "",NewCMQError(CMQError1012,err)
 	}
 
 	defer resp.Body.Close()
@@ -221,7 +221,7 @@ func httpRequest(method,url,param string,timeout int) (result string,e *CMQError
 	body, err := ioutil.ReadAll(resp.Body)
 
 	if err != nil {
-		return "",NewCMQError(CMQError101,err)
+		return "",NewCMQError(CMQError1013,err)
 	}
 	return string(body),nil
 }

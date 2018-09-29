@@ -199,7 +199,7 @@ func (q *Queue) ReceiveMessage(pollingWaitSeconds int) (msg *Message,err *CMQErr
 		"queueName":q.queueName,
 	}
 	if pollingWaitSeconds >=  0 {
-		params["UserpollingWaitSeconds"] = pollingWaitSeconds
+		params["UserpollingWaitSeconds"] = pollingWaitSeconds + 3
 		params["pollingWaitSeconds"] = pollingWaitSeconds
 	} else {
 		params["UserpollingWaitSeconds"] = 30
@@ -233,7 +233,7 @@ func (q *Queue) BatchReceiveMessage(numOfMsg,pollingWaitSeconds int) (result []M
 		"numOfMsg":numOfMsg,
 	}
 	if pollingWaitSeconds >= 0 {
-		params["UserpollingWaitSeconds"] = pollingWaitSeconds
+		params["UserpollingWaitSeconds"] = pollingWaitSeconds + 3
 		params["pollingWaitSeconds"] = pollingWaitSeconds
 	} else {
 		params["UserpollingWaitSeconds"] = 30
